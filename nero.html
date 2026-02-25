@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nero Pro - Datos de Sheets</title>
+    <title>Nero Pro - GitHub Pages</title>
     <style>
         :root {
             --orange-main: #ff7b00;
@@ -75,7 +75,7 @@
 
     <div class="control-box">
         <div class="label-row">
-            <span>Riego: <small id="bMinH">40</small>% - <small id="bMaxH">70</small>%</span>
+            <span>Riego: <small id="bMinH">--</small>% - <small id="bMaxH">--</small>%</span>
         </div>
         <div class="slider-container">
             <div id="trackH" class="slider-track"></div>
@@ -86,7 +86,7 @@
 
     <div class="control-box">
         <div class="label-row">
-            <span>Calibración: <small id="bMinC">600</small> - <small id="bMaxC">200</small></span>
+            <span>Calibración: <small id="bMinC">--</small> - <small id="bMaxC">--</small></span>
         </div>
         <div class="slider-container">
             <div id="trackC" class="slider-track"></div>
@@ -99,10 +99,9 @@
 </div>
 
 <script>
-    // 1. REEMPLAZA CON TU URL DE DESPLIEGUE REAL
+    // 1. IMPORTANTE: Tu URL debe ser la del despliegue "Cualquiera" (Anyone)
     const G_URL = "https://script.google.com/macros/s/AKfycbw1yzNLCNfaedoUKYyu8KYp9QXPY4gsK5e2-jYoKaFeHXtdzbs1s2wQd9BabLeSDHgQ/exec";
 
-    // --- DIBUJO ---
     function drawDial(val) {
         const c = document.getElementById('gauge'), ctx = c.getContext('2d');
         const cx = c.width / 2, cy = c.height - 10, radius = 90;
@@ -123,7 +122,6 @@
         ctx.restore();
     }
 
-    // --- SLIDERS ---
     function initSlider(idMin, idMax, idTrack, labelMin, labelMax) {
         const min = document.getElementById(idMin), max = document.getElementById(idMax), track = document.getElementById(idTrack);
         const update = () => {
@@ -136,22 +134,17 @@
         min.oninput = update; max.oninput = update; update();
     }
 
-    // --- CONEXIÓN REAL CON SHEETS (LÓGICA CORREGIDA) ---
     async function fetchData() {
         try {
-            // El truco es usar 'follow' y no enviar headers complejos
-            const res = await fetch(G_URL + "?leerUltimo=true", {
-                method: 'GET',
-                redirect: 'follow'
-            });
+            // Añadimos un parámetro aleatorio para evitar que el navegador use datos viejos (cache)
+            const cacheBuster = "&t=" + new Date().getTime();
+            const res = await fetch(G_URL + "?leerUltimo=true" + cacheBuster);
             const d = await res.json();
             if(d && d.h2 !== undefined) {
                 document.getElementById('valHum').innerText = d.h2;
                 drawDial(d.h2);
             }
-        } catch(e) {
-            console.log("Sincronizando con Sheets...");
-        }
+        } catch(e) { console.log("Sincronizando..."); }
     }
 
     async function enviarConfig() {
@@ -159,21 +152,20 @@
         btn.innerText = "ENVIANDO...";
         const params = `?updateConfig=true&2EN=${document.getElementById('minH').value}&2AP=${document.getElementById('maxH').value}&2SE=${document.getElementById('minC').value}&2MO=${document.getElementById('maxC').value}`;
         
-        // Para enviar a Google Sheets desde local, usamos mode: 'no-cors'
+        // En GitHubPages, usamos 'no-cors' para el envío masivo
         fetch(G_URL + params, { mode: 'no-cors' });
         
         setTimeout(() => {
-            btn.innerText = "¡GUARDADO!";
+            btn.innerText = "¡ENVIADO!";
             setTimeout(() => btn.innerText = "GUARDAR EN SHEETS", 2000);
-        }, 800);
+        }, 1500);
     }
 
-    // INICIO AL CARGAR
     window.onload = () => {
         initSlider('minH', 'maxH', 'trackH', 'bMinH', 'bMaxH');
         initSlider('minC', 'maxC', 'trackC', 'bMinC', 'bMaxC');
-        fetchData(); 
-        setInterval(fetchData, 10000); // Actualiza cada 10 segundos
+        fetchData();
+        setInterval(fetchData, 5000); // Actualización rápida cada 5 segundos para probar
     };
 </script>
 </body>
