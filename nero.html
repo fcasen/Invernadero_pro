@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nero Pro - Centrado Absoluto</title>
+    <title>Nero Pro - Datos de Sheets</title>
     <style>
         :root {
             --orange-main: #ff7b00;
@@ -58,7 +58,6 @@
             background: var(--orange-dark); color: white; font-weight: 800; font-size: 14px;
             cursor: pointer; transition: 0.3s; box-shadow: 0 10px 20px rgba(230, 81, 0, 0.2);
         }
-        #btnSave:active { transform: scale(0.96); }
     </style>
 </head>
 <body>
@@ -96,29 +95,25 @@
         </div>
     </div>
 
-    <button id="btnSave" onclick="enviarConfig()">GUARDAR CONFIGURACIÓN</button>
+    <button id="btnSave" onclick="enviarConfig()">GUARDAR EN SHEETS</button>
 </div>
 
 <script>
-    // 1. REEMPLAZA ESTA URL CON LA TUYA REAL
+    // 1. REEMPLAZA CON TU URL DE DESPLIEGUE REAL
     const G_URL = "https://script.google.com/macros/s/AKfycbw1yzNLCNfaedoUKYyu8KYp9QXPY4gsK5e2-jYoKaFeHXtdzbs1s2wQd9BabLeSDHgQ/exec";
 
+    // --- DIBUJO ---
     function drawDial(val) {
-        const c = document.getElementById('gauge');
-        if(!c) return;
-        const ctx = c.getContext('2d');
+        const c = document.getElementById('gauge'), ctx = c.getContext('2d');
         const cx = c.width / 2, cy = c.height - 10, radius = 90;
         let pct = Math.max(0, Math.min(100, val)) / 100;
-
         ctx.clearRect(0, 0, c.width, c.height);
         ctx.beginPath();
         ctx.arc(cx, cy, radius, Math.PI, 2 * Math.PI);
         ctx.lineWidth = 14; ctx.strokeStyle = '#fff3e0'; ctx.stroke();
-
         ctx.beginPath();
         ctx.arc(cx, cy, radius, Math.PI, Math.PI + (Math.PI * pct));
         ctx.lineWidth = 14; ctx.strokeStyle = '#ff7b00'; ctx.lineCap = 'round'; ctx.stroke();
-
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate((Math.PI * pct) - Math.PI);
@@ -128,17 +123,11 @@
         ctx.restore();
     }
 
+    // --- SLIDERS ---
     function initSlider(idMin, idMax, idTrack, labelMin, labelMax) {
-        const min = document.getElementById(idMin);
-        const max = document.getElementById(idMax);
-        const track = document.getElementById(idTrack);
-        
+        const min = document.getElementById(idMin), max = document.getElementById(idMax), track = document.getElementById(idTrack);
         const update = () => {
-            let vMin = parseInt(min.value);
-            let vMax = parseInt(max.value);
-            if(vMin > vMax) {
-                [min.value, max.value] = [max.value, min.value];
-            }
+            if(parseInt(min.value) > parseInt(max.value)) [min.value, max.value] = [max.value, min.value];
             document.getElementById(labelMin).innerText = min.value;
             document.getElementById(labelMax).innerText = max.value;
             const p1 = (min.value / min.max) * 100, p2 = (max.value / max.max) * 100;
@@ -147,34 +136,44 @@
         min.oninput = update; max.oninput = update; update();
     }
 
-    async function enviarConfig() {
-        const btn = document.getElementById('btnSave');
-        btn.innerText = "ENVIANDO...";
-        const params = `?updateConfig=true&2EN=${document.getElementById('minH').value}&2AP=${document.getElementById('maxH').value}&2SE=${document.getElementById('minC').value}&2MO=${document.getElementById('maxC').value}`;
-        try {
-            await fetch(G_URL + params, {mode:'no-cors'});
-            btn.innerText = "¡GUARDADO!";
-            setTimeout(() => btn.innerText = "GUARDAR CONFIGURACIÓN", 2000);
-        } catch(e) { btn.innerText = "ERROR DE RED"; }
-    }
-
+    // --- CONEXIÓN REAL CON SHEETS (LÓGICA CORREGIDA) ---
     async function fetchData() {
         try {
-            const res = await fetch(G_URL + "?leerUltimo=true");
+            // El truco es usar 'follow' y no enviar headers complejos
+            const res = await fetch(G_URL + "?leerUltimo=true", {
+                method: 'GET',
+                redirect: 'follow'
+            });
             const d = await res.json();
             if(d && d.h2 !== undefined) {
                 document.getElementById('valHum').innerText = d.h2;
                 drawDial(d.h2);
             }
-        } catch(e) { console.log("Sincronizando..."); }
+        } catch(e) {
+            console.log("Sincronizando con Sheets...");
+        }
     }
 
-    // EL ARREGLO FINAL: 
+    async function enviarConfig() {
+        const btn = document.getElementById('btnSave');
+        btn.innerText = "ENVIANDO...";
+        const params = `?updateConfig=true&2EN=${document.getElementById('minH').value}&2AP=${document.getElementById('maxH').value}&2SE=${document.getElementById('minC').value}&2MO=${document.getElementById('maxC').value}`;
+        
+        // Para enviar a Google Sheets desde local, usamos mode: 'no-cors'
+        fetch(G_URL + params, { mode: 'no-cors' });
+        
+        setTimeout(() => {
+            btn.innerText = "¡GUARDADO!";
+            setTimeout(() => btn.innerText = "GUARDAR EN SHEETS", 2000);
+        }, 800);
+    }
+
+    // INICIO AL CARGAR
     window.onload = () => {
         initSlider('minH', 'maxH', 'trackH', 'bMinH', 'bMaxH');
         initSlider('minC', 'maxC', 'trackC', 'bMinC', 'bMaxC');
         fetchData(); 
-        setInterval(fetchData, 10000); // Ahora actualiza cada 10 segundos
+        setInterval(fetchData, 10000); // Actualiza cada 10 segundos
     };
 </script>
 </body>
