@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nero Pro - Centrado Absoluto</title>
+    <style>
+        :root {
+            --orange-main: #ff7b00;
+            --orange-dark: #e65100;
+            --orange-light: #fff3e0;
+            --bg-soft: #fff5eb;
+            --thumb-size: 22px;
+        }
+
+        body {
+            display: flex; justify-content: center; align-items: center;
+            background: var(--bg-soft); font-family: 'Segoe UI', sans-serif;
+            margin: 0; min-height: 100vh;
+        }
+
+        #Nero { 
+            width: 350px; padding: 25px; border-radius: 30px;  
+            background: white; box-shadow: 0 15px 35px rgba(230, 81, 0, 0.1);
+            border: 1px solid #ffe0bd;
+            position: relative;
+        }  
+
+        .btn-back { position: absolute; top: 25px; left: 25px; text-decoration: none; font-size: 24px; color: #fbd38d; }
+
+        h1 { text-align: center; color: var(--orange-dark); margin: 0; font-size: 28px; font-weight: 800; }
+        h2 { text-align: center; color: var(--orange-main); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+
+        canvas { display: block; margin: 0 auto 15px; }
+
+        .status-info { text-align: center; margin-bottom: 25px; }
+        .val-main { font-size: 52px; font-weight: 900; color: var(--orange-dark); line-height: 1; }
+        .val-unit { font-size: 20px; color: #fbd38d; margin-left: 5px; }
+
+        .control-box { margin-bottom: 25px; }
+        .label-row { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .label-row span { font-size: 12px; font-weight: 800; color: var(--orange-dark); text-transform: uppercase; }
+
+        .slider-container { position: relative; height: 45px; display: flex; align-items: center; }
+        .slider-track { position: absolute; width: 100%; height: 8px; background: var(--orange-light); border-radius: 4px; }
+        
+        input[type="range"] {
+            position: absolute; width: 100%; pointer-events: none; appearance: none; background: none; margin: 0;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            pointer-events: auto; appearance: none; width: var(--thumb-size); height: var(--thumb-size);
+            background: white; border: 4px solid var(--orange-main); border-radius: 50%; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        #btnSave {
+            width: 100%; padding: 18px; border: none; border-radius: 20px;
+            background: var(--orange-dark); color: white; font-weight: 800; font-size: 14px;
+            cursor: pointer; transition: 0.3s; box-shadow: 0 10px 20px rgba(230, 81, 0, 0.2);
+        }
+        #btnSave:active { transform: scale(0.96); }
+    </style>
+</head>
+<body>
+
+<div id="Nero">
+    <a href="index.html" class="btn-back">←</a>
+    <h1>Nero</h1>
+    <h2>Sensor de Humedad 2</h2>
+
+    <canvas id="gauge" width="220" height="130"></canvas>
+    
+    <div class="status-info">
+        <div class="val-main"><span id="valHum">--</span><span class="val-unit">%</span></div>
+    </div>
+
+    <div class="control-box">
+        <div class="label-row">
+            <span>Riego: <small id="bMinH">40</small>% - <small id="bMaxH">70</small>%</span>
+        </div>
+        <div class="slider-container">
+            <div id="trackH" class="slider-track"></div>
+            <input type="range" id="minH" min="0" max="100" value="40">
+            <input type="range" id="maxH" min="0" max="100" value="70">
+        </div>
+    </div>
+
+    <div class="control-box">
+        <div class="label-row">
+            <span>Calibración: <small id="bMinC">600</small> - <small id="bMaxC">200</small></span>
+        </div>
+        <div class="slider-container">
+            <div id="trackC" class="slider-track"></div>
+            <input type="range" id="minC" min="100" max="900" value="600">
+            <input type="range" id="maxC" min="100" max="900" value="200">
+        </div>
+    </div>
+
+    <button id="btnSave" onclick="enviarConfig()">GUARDAR CONFIGURACIÓN</button>
+</div>
+
+<script>
+    // 1. REEMPLAZA ESTA URL CON LA TUYA REAL
+    const G_URL = "https://script.google.com/macros/s/AKfycbw1yzNLCNfaedoUKYyu8KYp9QXPY4gsK5e2-jYoKaFeHXtdzbs1s2wQd9BabLeSDHgQ/exec";
+
+    function drawDial(val) {
+        const c = document.getElementById('gauge');
+        if(!c) return;
+        const ctx = c.getContext('2d');
+        const cx = c.width / 2, cy = c.height - 10, radius = 90;
+        let pct = Math.max(0, Math.min(100, val)) / 100;
+
+        ctx.clearRect(0, 0, c.width, c.height);
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, Math.PI, 2 * Math.PI);
+        ctx.lineWidth = 14; ctx.strokeStyle = '#fff3e0'; ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, Math.PI, Math.PI + (Math.PI * pct));
+        ctx.lineWidth = 14; ctx.strokeStyle = '#ff7b00'; ctx.lineCap = 'round'; ctx.stroke();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate((Math.PI * pct) - Math.PI);
+        ctx.beginPath();
+        ctx.lineWidth = 4; ctx.strokeStyle = '#e65100'; ctx.moveTo(0, 0); ctx.lineTo(radius - 15, 0); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 7, 0, 2 * Math.PI); ctx.fillStyle = '#e65100'; ctx.fill();
+        ctx.restore();
+    }
+
+    function initSlider(idMin, idMax, idTrack, labelMin, labelMax) {
+        const min = document.getElementById(idMin);
+        const max = document.getElementById(idMax);
+        const track = document.getElementById(idTrack);
+        
+        const update = () => {
+            let vMin = parseInt(min.value);
+            let vMax = parseInt(max.value);
+            if(vMin > vMax) {
+                [min.value, max.value] = [max.value, min.value];
+            }
+            document.getElementById(labelMin).innerText = min.value;
+            document.getElementById(labelMax).innerText = max.value;
+            const p1 = (min.value / min.max) * 100, p2 = (max.value / max.max) * 100;
+            track.style.background = `linear-gradient(to right, #fff3e0 ${p1}%, #ff7b00 ${p1}%, #ff7b00 ${p2}%, #fff3e0 ${p2}%)`;
+        };
+        min.oninput = update; max.oninput = update; update();
+    }
+
+    async function enviarConfig() {
+        const btn = document.getElementById('btnSave');
+        btn.innerText = "ENVIANDO...";
+        const params = `?updateConfig=true&2EN=${document.getElementById('minH').value}&2AP=${document.getElementById('maxH').value}&2SE=${document.getElementById('minC').value}&2MO=${document.getElementById('maxC').value}`;
+        try {
+            await fetch(G_URL + params, {mode:'no-cors'});
+            btn.innerText = "¡GUARDADO!";
+            setTimeout(() => btn.innerText = "GUARDAR CONFIGURACIÓN", 2000);
+        } catch(e) { btn.innerText = "ERROR DE RED"; }
+    }
+
+    async function fetchData() {
+        try {
+            const res = await fetch(G_URL + "?leerUltimo=true");
+            const d = await res.json();
+            if(d && d.h2 !== undefined) {
+                document.getElementById('valHum').innerText = d.h2;
+                drawDial(d.h2);
+            }
+        } catch(e) { console.log("Sincronizando..."); }
+    }
+
+    // EL ARREGLO FINAL: 
+    window.onload = () => {
+        initSlider('minH', 'maxH', 'trackH', 'bMinH', 'bMaxH');
+        initSlider('minC', 'maxC', 'trackC', 'bMinC', 'bMaxC');
+        fetchData(); 
+        setInterval(fetchData, 10000); // Ahora actualiza cada 10 segundos
+    };
+</script>
+</body>
+</html>
